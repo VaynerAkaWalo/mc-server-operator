@@ -217,8 +217,9 @@ func (r *McServerReconciler) createRoute(McServer *serversv1alpha1.McServer) *ne
 		Spec: networkingv1alpha2.TCPRouteSpec{
 			CommonRouteSpec: networkingv1alpha2.CommonRouteSpec{
 				ParentRefs: []networkingv1alpha2.ParentReference{{
-					Name:      "envoy-gateway",
-					Namespace: ptr.To(networkingv1alpha2.Namespace("infra")),
+					Name:        "envoy-gateway",
+					Namespace:   ptr.To(networkingv1alpha2.Namespace("infra")),
+					SectionName: ptr.To(networkingv1alpha2.SectionName(McServer.Spec.RouteName)),
 				}},
 			},
 			Rules: []networkingv1alpha2.TCPRouteRule{{

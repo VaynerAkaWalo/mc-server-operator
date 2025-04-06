@@ -29,11 +29,11 @@ type McServerSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of McServer. Edit mcserver_types.go to remove/update
-	Name   string            `json:"name"`
-	Port   int32             `json:"port"`
-	Image  string            `json:"image"`
-	Env    map[string]string `json:"env"`
-	LBPort int32             `json:"LBPort"`
+	Name      string            `json:"name"`
+	Port      int32             `json:"port"`
+	Image     string            `json:"image"`
+	RouteName string            `json:"routeName"`
+	Env       map[string]string `json:"env"`
 }
 
 // McServerStatus defines the observed state of McServer

@@ -39,9 +39,6 @@ spec:
           spec:
             description: McServerSpec defines the desired state of McServer
             properties:
-              LBPort:
-                format: int32
-                type: integer
               env:
                 additionalProperties:
                   type: string
@@ -55,12 +52,14 @@ spec:
               port:
                 format: int32
                 type: integer
+              routeName:
+                type: string
             required:
-            - LBPort
             - env
             - image
             - name
             - port
+            - routeName
             type: object
           status:
             description: McServerStatus defines the observed state of McServer
