@@ -18,9 +18,11 @@ package controller
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/gateway-api/apis/v1"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -54,18 +56,81 @@ type McServerReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.0/pkg/reconcile
 func (r *McServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	log := log.FromContext(ctx)
 
-	serverController := &serversv1alpha1.McServer{}
-	err := r.Get(ctx, req.NamespacedName, serverController)
+	serverDefinition := &serversv1alpha1.McServer{}
+	err := r.Get(ctx, req.NamespacedName, serverDefinition)
 	if err != nil {
+		return ctrl.Result{}, nil
+	}
+
+	deployment := r.createDeployment(serverDefinition)
+	if err := controllerutil.SetControllerReference(serverDefinition, deployment, r.Scheme); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	currentDeployment := &appsv1.Deployment{}
+	err = r.Get(ctx, client.ObjectKeyFromObject(deployment), currentDeployment)
+	if err != nil && errors.IsNotFound(err) {
+		log.Info("Deployment not found creating new one")
+		err := r.Create(ctx, deployment)
+		if err != nil {
+			log.Error(err, "Failed to create new deployment")
+			return ctrl.Result{}, err
+		}
+
+		return ctrl.Result{Requeue: true}, nil
+	} else if err != nil {
+		log.Error(err, "Failed to get server deployment")
+		return ctrl.Result{}, nil
+	}
+
+	service := r.createService(serverDefinition)
+	if err := controllerutil.SetControllerReference(serverDefinition, service, r.Scheme); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	currentService := &corev1.Service{}
+	err = r.Get(ctx, client.ObjectKeyFromObject(service), currentService)
+	if err != nil && errors.IsNotFound(err) {
+		log.Info("Service not found creating new one")
+		err := r.Create(ctx, service)
+		if err != nil {
+			log.Error(err, "Failed to create new service")
+			return ctrl.Result{}, err
+		}
+
+		return ctrl.Result{Requeue: true}, nil
+	} else if err != nil {
+		log.Error(err, "Failed to get server service")
+		return ctrl.Result{}, nil
+	}
+
+	route := r.createRoute(serverDefinition)
+	if err := controllerutil.SetControllerReference(serverDefinition, route, r.Scheme); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	currentRoute := &networkingv1alpha2.TCPRoute{}
+	err = r.Get(ctx, client.ObjectKeyFromObject(currentRoute), currentService)
+	if err != nil && errors.IsNotFound(err) {
+		log.Info("TCPRoute not found creating new one")
+		err := r.Create(ctx, route)
+		if err != nil {
+			log.Error(err, "Failed to create new TCPRoute")
+			return ctrl.Result{}, err
+		}
+
+		return ctrl.Result{Requeue: true}, nil
+	} else if err != nil {
+		log.Error(err, "Failed to get server TCPRoute")
 		return ctrl.Result{}, nil
 	}
 
 	return ctrl.Result{}, nil
 }
 
-func (r *McServerReconciler) createDeployment(McServer serversv1alpha1.McServer) *appsv1.Deployment {
+func (r *McServerReconciler) createDeployment(McServer *serversv1alpha1.McServer) *appsv1.Deployment {
 	var envs []corev1.EnvVar
 	for key, value := range McServer.Spec.Env {
 		envs = append(envs, corev1.EnvVar{
@@ -76,7 +141,8 @@ func (r *McServerReconciler) createDeployment(McServer serversv1alpha1.McServer)
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: McServer.Spec.Name,
+			Name:      McServer.Spec.Name,
+			Namespace: "minecraft-server",
 			Labels: map[string]string{
 				"app": McServer.Spec.Name,
 			},
@@ -114,10 +180,11 @@ func (r *McServerReconciler) createDeployment(McServer serversv1alpha1.McServer)
 	return deployment
 }
 
-func (r *McServerReconciler) createService(McServer serversv1alpha1.McServer) *corev1.Service {
+func (r *McServerReconciler) createService(McServer *serversv1alpha1.McServer) *corev1.Service {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: McServer.Spec.Name,
+			Name:      McServer.Spec.Name,
+			Namespace: "minecraft-server",
 			Labels: map[string]string{
 				"app": McServer.Spec.Name,
 			},
@@ -138,10 +205,11 @@ func (r *McServerReconciler) createService(McServer serversv1alpha1.McServer) *c
 	return service
 }
 
-func (r *McServerReconciler) createRoute(McServer serversv1alpha1.McServer) *networkingv1alpha2.TCPRoute {
+func (r *McServerReconciler) createRoute(McServer *serversv1alpha1.McServer) *networkingv1alpha2.TCPRoute {
 	route := &networkingv1alpha2.TCPRoute{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: McServer.Spec.Name,
+			Name:      McServer.Spec.Name,
+			Namespace: "minecraft-server",
 			Labels: map[string]string{
 				"app": McServer.Spec.Name,
 			},
