@@ -115,7 +115,7 @@ func (r *McServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	currentRoute := &networkingv1alpha2.TCPRoute{}
-	err = r.Get(ctx, client.ObjectKeyFromObject(currentRoute), currentService)
+	err = r.Get(ctx, client.ObjectKeyFromObject(route), currentRoute)
 	if err != nil && errors.IsNotFound(err) {
 		log.Info("TCPRoute not found creating new one")
 		err := r.Create(ctx, route)
