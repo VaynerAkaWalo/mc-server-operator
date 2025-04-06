@@ -1,0 +1,9 @@
+apiVersion: servers.blamedevs.com/v1alpha1
+kind: McServer
+metadata:
+  labels:
+    app.kubernetes.io/name: mc-server-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: mcserver-sample
+spec:
+  # TODO(user): Add fields here
