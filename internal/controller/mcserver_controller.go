@@ -211,7 +211,7 @@ func (r *McServerReconciler) createService(McServer *serversv1alpha1.McServer) *
 func (r *McServerReconciler) createRoute(McServer *serversv1alpha1.McServer) *networkingv1alpha2.TCPRoute {
 	route := &networkingv1alpha2.TCPRoute{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "gateway.networking.k8s.io/v1",
+			APIVersion: "gateway.networking.k8s.io/v1alpha2",
 			Kind:       "TCPRoute",
 		},
 		ObjectMeta: metav1.ObjectMeta{
