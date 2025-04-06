@@ -27,7 +27,7 @@ import (
 	"github.com/VaynerAkaWalo/mc-server-operator/test/utils"
 )
 
-const namespace = "mc-server-operator-system"
+const namespace = "minecraft-server"
 
 var _ = Describe("controller", Ordered, func() {
 	BeforeAll(func() {
