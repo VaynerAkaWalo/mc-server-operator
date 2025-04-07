@@ -215,7 +215,7 @@ func (r *McServerReconciler) createRoute(McServer *serversv1alpha1.McServer) *ne
 			Kind:       "TCPRoute",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      McServer.Spec.Name,
+			Name:      McServer.Spec.RouteName,
 			Namespace: "minecraft-server",
 			Labels: map[string]string{
 				"app": McServer.Spec.RouteName,
