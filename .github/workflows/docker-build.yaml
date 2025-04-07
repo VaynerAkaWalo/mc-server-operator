@@ -33,5 +33,6 @@ jobs:
           context: .
           file: Dockerfile
           push: true
-          tags: ghcr.io/vaynerakawalo/${{ github.event.repository.name }}:${{ steps.commit_hash.outputs.SHORT_SHA }}
-          repository: ghcr.io/vaynerakawalo/${{ github.event.repository.name }}
+          tags: | 
+            ghcr.io/vaynerakawalo/${{ github.event.repository.name }}:${{ steps.commit_hash.outputs.SHORT_SHA }}
+            ghcr.io/vaynerakawalo/${{ github.event.repository.name }}:latest
