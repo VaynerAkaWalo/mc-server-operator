@@ -166,7 +166,7 @@ func (r *McServerReconciler) createDeployment(McServer *serversv1alpha1.McServer
 				},
 				Spec: corev1.PodSpec{
 					NodeSelector: map[string]string{
-						"deployment-target": "server-nodes",
+						"target": "server-nodes",
 					},
 					Tolerations: []corev1.Toleration{
 						{
