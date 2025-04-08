@@ -177,7 +177,7 @@ func (r *McServerReconciler) createDeployment(McServer *serversv1alpha1.McServer
 							Env: envs,
 							Resources: corev1.ResourceRequirements{
 								Requests: map[corev1.ResourceName]resource.Quantity{
-									corev1.ResourceCPU:    resource.MustParse("4"),
+									corev1.ResourceCPU:    resource.MustParse("3"),
 									corev1.ResourceMemory: resource.MustParse("7800Mi"),
 								},
 								Limits: map[corev1.ResourceName]resource.Quantity{
