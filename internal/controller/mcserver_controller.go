@@ -165,17 +165,6 @@ func (r *McServerReconciler) createDeployment(McServer *serversv1alpha1.McServer
 					},
 				},
 				Spec: corev1.PodSpec{
-					NodeSelector: map[string]string{
-						"target": "server-nodes",
-					},
-					Tolerations: []corev1.Toleration{
-						{
-							Key:      "deployment-restriction",
-							Operator: corev1.TolerationOpEqual,
-							Value:    "server",
-							Effect:   corev1.TaintEffectNoSchedule,
-						},
-					},
 					Containers: []corev1.Container{
 						{
 							Name:  "minecraft-server",
