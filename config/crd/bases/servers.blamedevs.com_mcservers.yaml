@@ -39,6 +39,9 @@ spec:
           spec:
             description: McServerSpec defines the desired state of McServer
             properties:
+              ExpireAfter:
+                format: int64
+                type: integer
               env:
                 additionalProperties:
                   type: string
@@ -55,6 +58,7 @@ spec:
               routeName:
                 type: string
             required:
+            - ExpireAfter
             - env
             - image
             - name
