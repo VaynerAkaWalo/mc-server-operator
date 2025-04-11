@@ -39,13 +39,13 @@ spec:
           spec:
             description: McServerSpec defines the desired state of McServer
             properties:
-              ExpireAfter:
-                format: int64
-                type: integer
               env:
                 additionalProperties:
                   type: string
                 type: object
+              expireAfter:
+                format: int64
+                type: integer
               image:
                 type: string
               name:
@@ -58,8 +58,8 @@ spec:
               routeName:
                 type: string
             required:
-            - ExpireAfter
             - env
+            - expireAfter
             - image
             - name
             - port
