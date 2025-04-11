@@ -34,7 +34,7 @@ type McServerSpec struct {
 	Image       string            `json:"image"`
 	RouteName   string            `json:"routeName"`
 	Env         map[string]string `json:"env"`
-	ExpireAfter int64             `json:"ExpireAfter"`
+	ExpireAfter int64             `json:"expireAfter"`
 }
 
 // McServerStatus defines the observed state of McServer
