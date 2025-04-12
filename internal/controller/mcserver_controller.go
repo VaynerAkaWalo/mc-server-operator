@@ -95,6 +95,7 @@ func (r *McServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	withStatus.Status.StartedTime = ""
 	if availablePods != 1 {
 		withStatus.Status.Status = "not ready"
+		withStatus.Status.StartedTime = ""
 	} else {
 		if serverDefinition.Status.StartedTime == "" {
 			withStatus.Status.StartedTime = time.Now().String()
