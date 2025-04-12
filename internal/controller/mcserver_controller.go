@@ -89,11 +89,12 @@ func (r *McServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		log.Error(err, "Failed to get server deployment")
 		return ctrl.Result{}, nil
 	}
+
 	availablePods := currentDeployment.Status.AvailableReplicas
 	withStatus := *serverDefinition.DeepCopy()
+	withStatus.Status.StartedTime = ""
 	if availablePods != 1 {
 		withStatus.Status.Status = "not ready"
-		withStatus.Status.StartedTime = ""
 	} else {
 		if serverDefinition.Status.StartedTime == "" {
 			withStatus.Status.StartedTime = time.Now().String()
