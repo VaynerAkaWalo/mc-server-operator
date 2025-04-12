@@ -92,12 +92,13 @@ func (r *McServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	availablePods := currentDeployment.Status.AvailableReplicas
 	withStatus := *serverDefinition.DeepCopy()
 	if availablePods != 1 {
-		serverDefinition.Status.Status = "not ready"
+		withStatus.Status.Status = "not ready"
+		withStatus.Status.StartedTime = ""
 	} else {
 		if serverDefinition.Status.StartedTime == "" {
-			serverDefinition.Status.StartedTime = time.Now().String()
+			withStatus.Status.StartedTime = time.Now().String()
 		}
-		serverDefinition.Status.Status = "up"
+		withStatus.Status.Status = "up"
 	}
 	err = r.Status().Patch(ctx, &withStatus, client.MergeFrom(serverDefinition))
 	if err != nil {
