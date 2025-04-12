@@ -93,7 +93,7 @@ func (r *McServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	availablePods := currentDeployment.Status.AvailableReplicas
 	withStatus := *serverDefinition.DeepCopy()
 	if availablePods != 0 && serverDefinition.Status.StartedTime == "" {
-		withStatus.Status.StartedTime = time.Now().String()
+		withStatus.Status.StartedTime = time.Now().Format(time.RFC3339)
 	}
 
 	if availablePods == 0 {
