@@ -39,8 +39,8 @@ type McServerSpec struct {
 
 // McServerStatus defines the observed state of McServer
 type McServerStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Status      string `json:"status"`
+	StartedTime string `json:"startedTime"`
 }
 
 // +kubebuilder:object:root=true

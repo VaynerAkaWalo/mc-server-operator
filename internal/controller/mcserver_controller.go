@@ -25,6 +25,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/gateway-api/apis/v1"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -87,6 +88,21 @@ func (r *McServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	} else if err != nil {
 		log.Error(err, "Failed to get server deployment")
 		return ctrl.Result{}, nil
+	}
+	availablePods := currentDeployment.Status.AvailableReplicas
+	withStatus := *serverDefinition.DeepCopy()
+	if availablePods != 1 {
+		serverDefinition.Status.Status = "not ready"
+	} else {
+		if serverDefinition.Status.StartedTime == "" {
+			serverDefinition.Status.StartedTime = time.Now().String()
+		}
+		serverDefinition.Status.Status = "up"
+	}
+	err = r.Status().Patch(ctx, &withStatus, client.MergeFrom(serverDefinition))
+	if err != nil {
+		log.Error(err, "Failed to update server status")
+		return ctrl.Result{}, err
 	}
 
 	service := r.createService(serverDefinition)
