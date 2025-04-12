@@ -147,7 +147,7 @@ func (r *McServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, nil
 	}
 
-	return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: time.Second * 15}, nil
 }
 
 func (r *McServerReconciler) createDeployment(McServer *serversv1alpha1.McServer) *appsv1.Deployment {
