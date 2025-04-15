@@ -22,9 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/gateway-api/apis/v1"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -35,7 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	serversv1alpha1 "github.com/VaynerAkaWalo/mc-server-operator/api/v1alpha1"
-	networkingv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
 // McServerReconciler reconciles a McServer object
@@ -125,27 +122,6 @@ func (r *McServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{Requeue: true}, nil
 	} else if err != nil {
 		log.Error(err, "Failed to get server service")
-		return ctrl.Result{}, nil
-	}
-
-	route := r.createRoute(serverDefinition)
-	if err := controllerutil.SetControllerReference(serverDefinition, route, r.Scheme); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	currentRoute := &networkingv1alpha2.TCPRoute{}
-	err = r.Get(ctx, client.ObjectKeyFromObject(route), currentRoute)
-	if err != nil && errors.IsNotFound(err) {
-		log.Info("TCPRoute not found creating new one")
-		err := r.Create(ctx, route)
-		if err != nil {
-			log.Error(err, "Failed to create new TCPRoute")
-			return ctrl.Result{}, err
-		}
-
-		return ctrl.Result{Requeue: true}, nil
-	} else if err != nil {
-		log.Error(err, "Failed to get server TCPRoute")
 		return ctrl.Result{}, nil
 	}
 
@@ -239,47 +215,13 @@ func (r *McServerReconciler) createService(McServer *serversv1alpha1.McServer) *
 			Ports: []corev1.ServicePort{
 				{
 					Protocol: corev1.ProtocolTCP,
-					Port:     McServer.Spec.Port,
+					Port:     int32(25565),
 				},
 			},
-			Type: corev1.ServiceTypeNodePort,
+			Type: corev1.ServiceTypeClusterIP,
 		},
 	}
 	return service
-}
-
-func (r *McServerReconciler) createRoute(McServer *serversv1alpha1.McServer) *networkingv1alpha2.TCPRoute {
-	route := &networkingv1alpha2.TCPRoute{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "gateway.networking.k8s.io/v1alpha2",
-			Kind:       "TCPRoute",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      McServer.Spec.RouteName,
-			Namespace: "minecraft-server",
-			Labels: map[string]string{
-				"app": McServer.Spec.RouteName,
-			},
-		},
-		Spec: networkingv1alpha2.TCPRouteSpec{
-			CommonRouteSpec: networkingv1alpha2.CommonRouteSpec{
-				ParentRefs: []networkingv1alpha2.ParentReference{{
-					Name:        "envoy-gateway",
-					Namespace:   ptr.To(networkingv1alpha2.Namespace("infra")),
-					SectionName: ptr.To(networkingv1alpha2.SectionName(McServer.Spec.RouteName)),
-				}},
-			},
-			Rules: []networkingv1alpha2.TCPRouteRule{{
-				BackendRefs: []networkingv1alpha2.BackendRef{{
-					BackendObjectReference: networkingv1alpha2.BackendObjectReference{
-						Name: v1.ObjectName(McServer.Spec.Name),
-						Port: ptr.To(networkingv1alpha2.PortNumber(McServer.Spec.Port)),
-					},
-				}},
-			}},
-		},
-	}
-	return route
 }
 
 // SetupWithManager sets up the controller with the Manager.
