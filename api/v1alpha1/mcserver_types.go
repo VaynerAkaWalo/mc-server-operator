@@ -30,9 +30,7 @@ type McServerSpec struct {
 
 	// Foo is an example field of McServer. Edit mcserver_types.go to remove/update
 	Name        string            `json:"name"`
-	Port        int32             `json:"port"`
 	Image       string            `json:"image"`
-	RouteName   string            `json:"routeName"`
 	Env         map[string]string `json:"env"`
 	ExpireAfter int64             `json:"expireAfter"`
 }

@@ -176,7 +176,7 @@ func (r *McServerReconciler) createDeployment(McServer *serversv1alpha1.McServer
 							Image: McServer.Spec.Image,
 							Ports: []corev1.ContainerPort{
 								{
-									ContainerPort: McServer.Spec.Port,
+									ContainerPort: 25565,
 								},
 							},
 							Env: envs,

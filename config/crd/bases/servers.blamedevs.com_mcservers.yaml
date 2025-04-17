@@ -52,18 +52,11 @@ spec:
                 description: Foo is an example field of McServer. Edit mcserver_types.go
                   to remove/update
                 type: string
-              port:
-                format: int32
-                type: integer
-              routeName:
-                type: string
             required:
             - env
             - expireAfter
             - image
             - name
-            - port
-            - routeName
             type: object
           status:
             description: McServerStatus defines the observed state of McServer
