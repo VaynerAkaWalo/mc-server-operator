@@ -174,6 +174,8 @@ func (r *McServerReconciler) createDeployment(McServer *serversv1alpha1.McServer
 						{
 							Name:  "minecraft-server",
 							Image: McServer.Spec.Image,
+							TTY:   true,
+							Stdin: true,
 							Ports: []corev1.ContainerPort{
 								{
 									ContainerPort: 25565,
@@ -182,12 +184,12 @@ func (r *McServerReconciler) createDeployment(McServer *serversv1alpha1.McServer
 							Env: envs,
 							Resources: corev1.ResourceRequirements{
 								Requests: map[corev1.ResourceName]resource.Quantity{
-									corev1.ResourceCPU:    resource.MustParse("3"),
-									corev1.ResourceMemory: resource.MustParse("7000Mi"),
+									corev1.ResourceCPU:    resource.MustParse(McServer.Spec.CpuRequest),
+									corev1.ResourceMemory: resource.MustParse(McServer.Spec.Memory),
 								},
 								Limits: map[corev1.ResourceName]resource.Quantity{
-									corev1.ResourceCPU:    resource.MustParse("4"),
-									corev1.ResourceMemory: resource.MustParse("7000Mi"),
+									corev1.ResourceCPU:    resource.MustParse(McServer.Spec.CpuLimit),
+									corev1.ResourceMemory: resource.MustParse(McServer.Spec.Memory),
 								},
 							},
 						},

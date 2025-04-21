@@ -39,6 +39,10 @@ spec:
           spec:
             description: McServerSpec defines the desired state of McServer
             properties:
+              cpuLimit:
+                type: string
+              cpuRequest:
+                type: string
               env:
                 additionalProperties:
                   type: string
@@ -48,14 +52,19 @@ spec:
                 type: integer
               image:
                 type: string
+              memory:
+                type: string
               name:
                 description: Foo is an example field of McServer. Edit mcserver_types.go
                   to remove/update
                 type: string
             required:
+            - cpuLimit
+            - cpuRequest
             - env
             - expireAfter
             - image
+            - memory
             - name
             type: object
           status:

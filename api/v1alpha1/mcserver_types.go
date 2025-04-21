@@ -32,6 +32,9 @@ type McServerSpec struct {
 	Name        string            `json:"name"`
 	Image       string            `json:"image"`
 	Env         map[string]string `json:"env"`
+	CpuRequest  string            `json:"cpuRequest"`
+	CpuLimit    string            `json:"cpuLimit"`
+	Memory      string            `json:"memory"`
 	ExpireAfter int64             `json:"expireAfter"`
 }
 
