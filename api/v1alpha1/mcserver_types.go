@@ -29,13 +29,12 @@ type McServerSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of McServer. Edit mcserver_types.go to remove/update
-	Name        string            `json:"name"`
-	Image       string            `json:"image"`
-	Env         map[string]string `json:"env"`
-	CpuRequest  string            `json:"cpuRequest"`
-	CpuLimit    string            `json:"cpuLimit"`
-	Memory      string            `json:"memory"`
-	ExpireAfter int64             `json:"expireAfter"`
+	Name         string            `json:"name"`
+	Image        string            `json:"image"`
+	Env          map[string]string `json:"env"`
+	Memory       string            `json:"memory"`
+	ExpireAfter  int64             `json:"expireAfter"`
+	InstanceType string            `json:"instanceType"`
 }
 
 // McServerStatus defines the observed state of McServer

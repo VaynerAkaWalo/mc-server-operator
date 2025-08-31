@@ -39,10 +39,6 @@ spec:
           spec:
             description: McServerSpec defines the desired state of McServer
             properties:
-              cpuLimit:
-                type: string
-              cpuRequest:
-                type: string
               env:
                 additionalProperties:
                   type: string
@@ -52,6 +48,8 @@ spec:
                 type: integer
               image:
                 type: string
+              instanceType:
+                type: string
               memory:
                 type: string
               name:
@@ -59,11 +57,10 @@ spec:
                   to remove/update
                 type: string
             required:
-            - cpuLimit
-            - cpuRequest
             - env
             - expireAfter
             - image
+            - instanceType
             - memory
             - name
             type: object

@@ -159,14 +159,30 @@ func (r *McServerReconciler) createDeployment(McServer *serversv1alpha1.McServer
 					},
 				},
 				Spec: corev1.PodSpec{
-					NodeSelector: map[string]string{
-						"target": "server-nodes",
+					Affinity: &corev1.Affinity{
+						NodeAffinity: &corev1.NodeAffinity{
+							RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+								NodeSelectorTerms: []corev1.NodeSelectorTerm{
+									{
+										MatchExpressions: []corev1.NodeSelectorRequirement{
+											{
+												Key:      "instanceType",
+												Operator: corev1.NodeSelectorOpIn,
+												Values: []string{
+													McServer.Spec.InstanceType,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
 					},
 					Tolerations: []corev1.Toleration{
 						{
-							Key:      "deployment-restriction",
+							Key:      "nodeType",
 							Operator: corev1.TolerationOpEqual,
-							Value:    "server",
+							Value:    "mc-server-node",
 							Effect:   corev1.TaintEffectNoSchedule,
 						},
 					},
@@ -184,11 +200,9 @@ func (r *McServerReconciler) createDeployment(McServer *serversv1alpha1.McServer
 							Env: envs,
 							Resources: corev1.ResourceRequirements{
 								Requests: map[corev1.ResourceName]resource.Quantity{
-									corev1.ResourceCPU:    resource.MustParse(McServer.Spec.CpuRequest),
 									corev1.ResourceMemory: resource.MustParse(McServer.Spec.Memory),
 								},
 								Limits: map[corev1.ResourceName]resource.Quantity{
-									corev1.ResourceCPU:    resource.MustParse(McServer.Spec.CpuLimit),
 									corev1.ResourceMemory: resource.MustParse(McServer.Spec.Memory),
 								},
 							},
