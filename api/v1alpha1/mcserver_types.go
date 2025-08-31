@@ -35,6 +35,7 @@ type McServerSpec struct {
 	Memory       string            `json:"memory"`
 	ExpireAfter  int64             `json:"expireAfter"`
 	InstanceType string            `json:"instanceType"`
+	Volume       string            `json:"volume,omitempty"`
 }
 
 // McServerStatus defines the observed state of McServer

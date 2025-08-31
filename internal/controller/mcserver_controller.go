@@ -137,6 +137,8 @@ func (r *McServerReconciler) createDeployment(McServer *serversv1alpha1.McServer
 		})
 	}
 
+	volume, volumeMount := volumeSection(McServer)
+
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      McServer.Spec.Name,
@@ -206,8 +208,10 @@ func (r *McServerReconciler) createDeployment(McServer *serversv1alpha1.McServer
 									corev1.ResourceMemory: resource.MustParse(McServer.Spec.Memory),
 								},
 							},
+							VolumeMounts: volumeMount,
 						},
 					},
+					Volumes: volume,
 				},
 			},
 		},
@@ -245,4 +249,25 @@ func (r *McServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&serversv1alpha1.McServer{}).
 		Complete(r)
+}
+
+func volumeSection(McServer *serversv1alpha1.McServer) ([]corev1.Volume, []corev1.VolumeMount) {
+	if McServer.Spec.Volume == "" {
+		return []corev1.Volume{}, []corev1.VolumeMount{}
+	}
+
+	volume := []corev1.Volume{
+		{
+			Name: McServer.Spec.Volume,
+		},
+	}
+
+	volumeMount := []corev1.VolumeMount{
+		{
+			Name:      McServer.Spec.Volume,
+			MountPath: "/data",
+		},
+	}
+
+	return volume, volumeMount
 }
