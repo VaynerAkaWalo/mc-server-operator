@@ -9,10 +9,12 @@ import (
 // Servers run user-chosen mods, so pods get no cluster credentials, no cluster DNS and no privileges.
 const (
 	serverUID         = 1000
-	serverCPU         = "1"
 	serverDiskRequest = "2Gi"
 	serverDiskLimit   = "8Gi"
 )
+
+// Game nodes have 2 cores, and two servers per node must fit next to OKE's reservations and system daemonsets.
+const serverCPU = "750m"
 
 func podSecurityContext() *corev1.PodSecurityContext {
 	return &corev1.PodSecurityContext{
