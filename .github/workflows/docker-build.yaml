@@ -27,11 +27,15 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: | 
             ghcr.io/vaynerakawalo/${{ github.event.repository.name }}:${{ steps.commit_hash.outputs.SHORT_SHA }}
