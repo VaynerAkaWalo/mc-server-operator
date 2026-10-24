@@ -161,6 +161,11 @@ func (r *McServerReconciler) createDeployment(McServer *serversv1alpha1.McServer
 					},
 				},
 				Spec: corev1.PodSpec{
+					AutomountServiceAccountToken: pointer.Bool(false),
+					EnableServiceLinks:           pointer.Bool(false),
+					DNSPolicy:                    corev1.DNSNone,
+					DNSConfig:                    publicDNS(),
+					SecurityContext:              podSecurityContext(),
 					Affinity: &corev1.Affinity{
 						NodeAffinity: &corev1.NodeAffinity{
 							RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
@@ -199,13 +204,17 @@ func (r *McServerReconciler) createDeployment(McServer *serversv1alpha1.McServer
 									ContainerPort: 25565,
 								},
 							},
-							Env: envs,
+							Env:             envs,
+							SecurityContext: containerSecurityContext(),
 							Resources: corev1.ResourceRequirements{
 								Requests: map[corev1.ResourceName]resource.Quantity{
-									corev1.ResourceMemory: resource.MustParse(McServer.Spec.Memory),
+									corev1.ResourceCPU:              resource.MustParse(serverCPU),
+									corev1.ResourceMemory:           resource.MustParse(McServer.Spec.Memory),
+									corev1.ResourceEphemeralStorage: resource.MustParse(serverDiskRequest),
 								},
 								Limits: map[corev1.ResourceName]resource.Quantity{
-									corev1.ResourceMemory: resource.MustParse(McServer.Spec.Memory),
+									corev1.ResourceMemory:           resource.MustParse(McServer.Spec.Memory),
+									corev1.ResourceEphemeralStorage: resource.MustParse(serverDiskLimit),
 								},
 							},
 							VolumeMounts: volumeMount,
@@ -259,6 +268,11 @@ func volumeSection(McServer *serversv1alpha1.McServer) ([]corev1.Volume, []corev
 	volume := []corev1.Volume{
 		{
 			Name: McServer.Spec.Volume,
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{
+					SizeLimit: diskLimit(),
+				},
+			},
 		},
 	}
 
