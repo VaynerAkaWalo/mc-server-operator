@@ -9,7 +9,7 @@ import (
 // Servers run user-chosen mods, so pods get no cluster credentials, no cluster DNS and no privileges.
 const (
 	serverUID         = 1000
-	serverCPU         = "1"
+	serverCPU         = "750m"
 	serverDiskRequest = "2Gi"
 	serverDiskLimit   = "8Gi"
 )
