@@ -22,22 +22,22 @@ flushed() {
 }
 
 snapshot() {
-    status=1
+    result=1
 
     if reply=$(rcon-cli save-off) && saving_disabled "$reply"; then
         if reply=$(rcon-cli save-all flush) && flushed "$reply"; then
-            backup && status=0
+            backup && result=0
         fi
     fi
 
     rcon-cli save-on >/dev/null
-    return "$status"
+    return "$result"
 }
 
 retain() {
     cycles=$((cycles + 1))
 
-    restic forget --host world --tag pending --keep-within 1h
+    discard_pending
 
     if [ $((cycles % 12)) -eq 0 ]; then
         restic forget --host world --tag ok --keep-last "$KEEP_SNAPSHOTS" --prune
