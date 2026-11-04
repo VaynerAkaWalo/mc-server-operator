@@ -36,10 +36,13 @@ snapshot() {
 
 retain() {
     cycles=$((cycles + 1))
+
+    restic forget --host world --tag pending --keep-within 1h
+
     if [ $((cycles % 12)) -eq 0 ]; then
-        restic forget --host world --keep-last "$KEEP_SNAPSHOTS" --prune
+        restic forget --host world --tag ok --keep-last "$KEEP_SNAPSHOTS" --prune
     else
-        restic forget --host world --keep-last "$KEEP_SNAPSHOTS"
+        restic forget --host world --tag ok --keep-last "$KEEP_SNAPSHOTS"
     fi
 }
 

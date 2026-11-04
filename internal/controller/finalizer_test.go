@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -37,7 +38,7 @@ func fakeReconcilerWith(t *testing.T, saves SaveConfig, funcs interceptor.Funcs,
 
 	cluster := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).WithInterceptorFuncs(funcs).Build()
 
-	return &McServerReconciler{Client: cluster, Scheme: scheme, Saves: saves}
+	return &McServerReconciler{Client: cluster, Scheme: scheme, PodReader: cluster, Saves: saves}
 }
 
 func request() ctrl.Request {
@@ -51,6 +52,14 @@ func storedServer(name string, finalizers ...string) *serversv1alpha1.McServer {
 	server.Finalizers = finalizers
 
 	return server
+}
+
+func serverPod() *corev1.Pod {
+	return &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+		Name:      "test-server-abc",
+		Namespace: serverNamespace,
+		Labels:    map[string]string{"app": "test-server"},
+	}}
 }
 
 func terminatingDeployment() *appsv1.Deployment {
@@ -140,6 +149,22 @@ func TestServerWorkloadIsDeletedInTheForegroundSoPodsAreGoneBeforeItDisappears(t
 	}
 	if policy == nil || *policy != metav1.DeletePropagationForeground {
 		t.Errorf("propagation = %v, want Foreground", policy)
+	}
+}
+
+func TestDeletedServerStaysWhilePodsOutliveTheirDeployment(t *testing.T) {
+	reconciler := fakeReconciler(t, testSaves(), deletingServer(), serverPod())
+
+	result, err := reconciler.Reconcile(context.Background(), request())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.RequeueAfter != finalizeRetryInterval {
+		t.Errorf("requeue = %v, want %v", result.RequeueAfter, finalizeRetryInterval)
+	}
+
+	if err := reconciler.Get(context.Background(), request().NamespacedName, &serversv1alpha1.McServer{}); err != nil {
+		t.Fatalf("server disappeared while a pod could still write to the save: %v", err)
 	}
 }
 

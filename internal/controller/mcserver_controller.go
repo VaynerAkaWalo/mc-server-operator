@@ -40,8 +40,9 @@ import (
 // McServerReconciler reconciles a McServer object
 type McServerReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	Saves  SaveConfig
+	Scheme    *runtime.Scheme
+	PodReader client.Reader
+	Saves     SaveConfig
 }
 
 // +kubebuilder:rbac:groups=servers.blamedevs.com,resources=mcservers,verbs=get;list;watch;create;update;patch;delete
@@ -49,6 +50,7 @@ type McServerReconciler struct {
 // +kubebuilder:rbac:groups=servers.blamedevs.com,resources=mcservers/finalizers,verbs=update
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=tcproutes,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -173,6 +175,15 @@ func (r *McServerReconciler) finalize(ctx context.Context, server *serversv1alph
 			return ctrl.Result{}, err
 		}
 
+		return ctrl.Result{RequeueAfter: finalizeRetryInterval}, nil
+	}
+
+	pods := &corev1.PodList{}
+	if err := r.PodReader.List(ctx, pods, client.InNamespace(serverNamespace), client.MatchingLabels{"app": server.Spec.Name}); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if len(pods.Items) > 0 {
 		return ctrl.Result{RequeueAfter: finalizeRetryInterval}, nil
 	}
 

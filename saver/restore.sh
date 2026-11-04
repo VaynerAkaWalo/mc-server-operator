@@ -16,8 +16,8 @@ fi
 
 restic unlock
 
-snapshots=$(restic snapshots --host world --latest 1 --json)
+snapshots=$(restic snapshots --host world --tag ok --latest 1 --json)
 
 case "$snapshots" in
-    *'"id"'*) restic restore latest:/data --host world --target /data ;;
+    *'"id"'*) restic restore latest:/data --host world --tag ok --target /data ;;
 esac
