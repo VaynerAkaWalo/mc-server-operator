@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,7 +39,9 @@ import (
 // McServerReconciler reconciles a McServer object
 type McServerReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme    *runtime.Scheme
+	PodReader client.Reader
+	Saves     SaveConfig
 }
 
 // +kubebuilder:rbac:groups=servers.blamedevs.com,resources=mcservers,verbs=get;list;watch;create;update;patch;delete
@@ -46,6 +49,7 @@ type McServerReconciler struct {
 // +kubebuilder:rbac:groups=servers.blamedevs.com,resources=mcservers/finalizers,verbs=update
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=tcproutes,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -64,6 +68,20 @@ func (r *McServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	err := r.Get(ctx, req.NamespacedName, serverDefinition)
 	if err != nil {
 		return ctrl.Result{}, nil
+	}
+
+	if !serverDefinition.DeletionTimestamp.IsZero() {
+		return r.finalize(ctx, serverDefinition)
+	}
+
+	if serverDefinition.Spec.Save != nil {
+		if !r.Saves.Configured() {
+			return ctrl.Result{}, fmt.Errorf("server %s requests a save but saves are not configured", serverDefinition.Spec.Name)
+		}
+
+		if err := r.ensureFinalizer(ctx, serverDefinition); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	deployment := r.createDeployment(serverDefinition)
@@ -128,6 +146,42 @@ func (r *McServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	return ctrl.Result{RequeueAfter: time.Second * 15}, nil
 }
 
+func (r *McServerReconciler) ensureFinalizer(ctx context.Context, server *serversv1alpha1.McServer) error {
+	if controllerutil.ContainsFinalizer(server, saveFinalizer) {
+		return nil
+	}
+
+	patch := client.MergeFrom(server.DeepCopy())
+	controllerutil.AddFinalizer(server, saveFinalizer)
+
+	return r.Patch(ctx, server, patch)
+}
+
+func (r *McServerReconciler) finalize(ctx context.Context, server *serversv1alpha1.McServer) (ctrl.Result, error) {
+	if !controllerutil.ContainsFinalizer(server, saveFinalizer) {
+		return ctrl.Result{}, nil
+	}
+
+	deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: server.Spec.Name, Namespace: serverNamespace}}
+	if err := r.Delete(ctx, deployment); client.IgnoreNotFound(err) != nil {
+		return ctrl.Result{}, err
+	}
+
+	pods := &corev1.PodList{}
+	if err := r.PodReader.List(ctx, pods, client.InNamespace(serverNamespace), client.MatchingLabels{"app": server.Spec.Name}); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if len(pods.Items) > 0 {
+		return ctrl.Result{RequeueAfter: finalizeRetryInterval}, nil
+	}
+
+	patch := client.MergeFrom(server.DeepCopy())
+	controllerutil.RemoveFinalizer(server, saveFinalizer)
+
+	return ctrl.Result{}, r.Patch(ctx, server, patch)
+}
+
 func (r *McServerReconciler) createDeployment(McServer *serversv1alpha1.McServer) *appsv1.Deployment {
 	var envs []corev1.EnvVar
 	for key, value := range McServer.Spec.Env {
@@ -139,10 +193,23 @@ func (r *McServerReconciler) createDeployment(McServer *serversv1alpha1.McServer
 
 	volume, volumeMount := volumeSection(McServer)
 
+	var initContainers []corev1.Container
+	var pullSecrets []corev1.LocalObjectReference
+	var gracePeriod *int64
+	if McServer.Spec.Save != nil {
+		initContainers = r.Saves.initContainers(McServer.Spec.Save.ID)
+		volume = append(volume, cacheVolume())
+		gracePeriod = pointer.Int64(saveGracePeriodSeconds)
+
+		if r.Saves.PullSecret != "" {
+			pullSecrets = []corev1.LocalObjectReference{{Name: r.Saves.PullSecret}}
+		}
+	}
+
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      McServer.Spec.Name,
-			Namespace: "minecraft-server",
+			Namespace: serverNamespace,
 			Labels: map[string]string{
 				"app": McServer.Spec.Name,
 			},
@@ -161,11 +228,14 @@ func (r *McServerReconciler) createDeployment(McServer *serversv1alpha1.McServer
 					},
 				},
 				Spec: corev1.PodSpec{
-					AutomountServiceAccountToken: pointer.Bool(false),
-					EnableServiceLinks:           pointer.Bool(false),
-					DNSPolicy:                    corev1.DNSNone,
-					DNSConfig:                    publicDNS(),
-					SecurityContext:              podSecurityContext(),
+					InitContainers:                initContainers,
+					ImagePullSecrets:              pullSecrets,
+					TerminationGracePeriodSeconds: gracePeriod,
+					AutomountServiceAccountToken:  pointer.Bool(false),
+					EnableServiceLinks:            pointer.Bool(false),
+					DNSPolicy:                     corev1.DNSNone,
+					DNSConfig:                     publicDNS(),
+					SecurityContext:               podSecurityContext(),
 					Affinity: &corev1.Affinity{
 						NodeAffinity: &corev1.NodeAffinity{
 							RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
@@ -232,7 +302,7 @@ func (r *McServerReconciler) createService(McServer *serversv1alpha1.McServer) *
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      McServer.Spec.Name,
-			Namespace: "minecraft-server",
+			Namespace: serverNamespace,
 			Labels: map[string]string{
 				"app": McServer.Spec.Name,
 			},
@@ -261,13 +331,18 @@ func (r *McServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func volumeSection(McServer *serversv1alpha1.McServer) ([]corev1.Volume, []corev1.VolumeMount) {
-	if McServer.Spec.Volume == "" {
+	name := McServer.Spec.Volume
+	if McServer.Spec.Save != nil {
+		name = dataVolumeName
+	}
+
+	if name == "" {
 		return []corev1.Volume{}, []corev1.VolumeMount{}
 	}
 
 	volume := []corev1.Volume{
 		{
-			Name: McServer.Spec.Volume,
+			Name: name,
 			VolumeSource: corev1.VolumeSource{
 				EmptyDir: &corev1.EmptyDirVolumeSource{
 					SizeLimit: diskLimit(),
@@ -278,8 +353,8 @@ func volumeSection(McServer *serversv1alpha1.McServer) ([]corev1.Volume, []corev
 
 	volumeMount := []corev1.VolumeMount{
 		{
-			Name:      McServer.Spec.Volume,
-			MountPath: "/data",
+			Name:      name,
+			MountPath: dataMountPath,
 		},
 	}
 

@@ -36,6 +36,12 @@ type McServerSpec struct {
 	ExpireAfter  int64             `json:"expireAfter"`
 	InstanceType string            `json:"instanceType"`
 	Volume       string            `json:"volume,omitempty"`
+	Save         *SaveSpec         `json:"save,omitempty"`
+}
+
+type SaveSpec struct {
+	// +kubebuilder:validation:Pattern=`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`
+	ID string `json:"id"`
 }
 
 // McServerStatus defines the observed state of McServer

@@ -21,6 +21,7 @@ import (
 	"flag"
 	"os"
 	networkingv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -60,6 +61,7 @@ func main() {
 	var secureMetrics bool
 	var enableHTTP2 bool
 	var tlsOpts []func(*tls.Config)
+	var saves controller.SaveConfig
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -70,6 +72,14 @@ func main() {
 		"If set, the metrics endpoint is served securely via HTTPS. Use --metrics-secure=false to use HTTP instead.")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
+	flag.StringVar(&saves.Endpoint, "saves-endpoint", "", "S3-compatible endpoint URL of the bucket that holds world saves.")
+	flag.StringVar(&saves.Bucket, "saves-bucket", "", "Bucket that holds world saves.")
+	flag.StringVar(&saves.Region, "saves-region", "", "Region used to sign requests to the saves bucket.")
+	flag.StringVar(&saves.SecretName, "saves-secret", "", "Secret in the server namespace with the bucket credentials and the restic password.")
+	flag.StringVar(&saves.Image, "saves-image", "", "Image that restores and uploads world saves.")
+	flag.StringVar(&saves.PullSecret, "saves-image-pull-secret", "", "Image pull secret for the saves image.")
+	flag.DurationVar(&saves.Interval, "saves-interval", 5*time.Minute, "Time between world snapshots of a running server.")
+	flag.IntVar(&saves.KeepSnapshots, "saves-keep-snapshots", 10, "Snapshots kept per world.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -148,8 +158,10 @@ func main() {
 	}
 
 	if err = (&controller.McServerReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:    mgr.GetClient(),
+		Scheme:    mgr.GetScheme(),
+		PodReader: mgr.GetAPIReader(),
+		Saves:     saves,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "McServer")
 		os.Exit(1)

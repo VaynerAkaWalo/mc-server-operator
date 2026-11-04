@@ -56,6 +56,14 @@ spec:
                 description: Foo is an example field of McServer. Edit mcserver_types.go
                   to remove/update
                 type: string
+              save:
+                properties:
+                  id:
+                    pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+                    type: string
+                required:
+                - id
+                type: object
               volume:
                 type: string
             required:
