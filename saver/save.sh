@@ -5,16 +5,32 @@ set -u
 
 cycles=0
 
-snapshot() {
-    rcon-cli save-off || return 1
+saving_disabled() {
+    case "$1" in
+        *"saving is now disabled"*|*"already turned off"*) return 0 ;;
+    esac
 
-    status=0
-    rcon-cli save-all flush || status=$?
-    if [ "$status" -eq 0 ]; then
-        backup || status=$?
+    return 1
+}
+
+flushed() {
+    case "$1" in
+        *"Saved the game"*) return 0 ;;
+    esac
+
+    return 1
+}
+
+snapshot() {
+    status=1
+
+    if reply=$(rcon-cli save-off) && saving_disabled "$reply"; then
+        if reply=$(rcon-cli save-all flush) && flushed "$reply"; then
+            backup && status=0
+        fi
     fi
 
-    rcon-cli save-on || true
+    rcon-cli save-on >/dev/null
     return "$status"
 }
 
@@ -38,5 +54,9 @@ while :; do
     sleep "$SNAPSHOT_INTERVAL_SECONDS" &
     wait $!
 
-    snapshot && retain
+    if snapshot; then
+        retain
+    else
+        echo "snapshot skipped" >&2
+    fi
 done

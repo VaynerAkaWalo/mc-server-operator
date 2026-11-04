@@ -29,6 +29,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -39,9 +40,8 @@ import (
 // McServerReconciler reconciles a McServer object
 type McServerReconciler struct {
 	client.Client
-	Scheme    *runtime.Scheme
-	PodReader client.Reader
-	Saves     SaveConfig
+	Scheme *runtime.Scheme
+	Saves  SaveConfig
 }
 
 // +kubebuilder:rbac:groups=servers.blamedevs.com,resources=mcservers,verbs=get;list;watch;create;update;patch;delete
@@ -49,7 +49,6 @@ type McServerReconciler struct {
 // +kubebuilder:rbac:groups=servers.blamedevs.com,resources=mcservers/finalizers,verbs=update
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=tcproutes,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -162,17 +161,18 @@ func (r *McServerReconciler) finalize(ctx context.Context, server *serversv1alph
 		return ctrl.Result{}, nil
 	}
 
-	deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: server.Spec.Name, Namespace: serverNamespace}}
-	if err := r.Delete(ctx, deployment); client.IgnoreNotFound(err) != nil {
+	deployment := &appsv1.Deployment{}
+	key := types.NamespacedName{Name: server.Spec.Name, Namespace: serverNamespace}
+	err := r.Get(ctx, key, deployment)
+	if client.IgnoreNotFound(err) != nil {
 		return ctrl.Result{}, err
 	}
 
-	pods := &corev1.PodList{}
-	if err := r.PodReader.List(ctx, pods, client.InNamespace(serverNamespace), client.MatchingLabels{"app": server.Spec.Name}); err != nil {
-		return ctrl.Result{}, err
-	}
+	if err == nil {
+		if err := r.Delete(ctx, deployment, client.PropagationPolicy(metav1.DeletePropagationForeground)); client.IgnoreNotFound(err) != nil {
+			return ctrl.Result{}, err
+		}
 
-	if len(pods.Items) > 0 {
 		return ctrl.Result{RequeueAfter: finalizeRetryInterval}, nil
 	}
 

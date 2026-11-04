@@ -158,10 +158,9 @@ func main() {
 	}
 
 	if err = (&controller.McServerReconciler{
-		Client:    mgr.GetClient(),
-		Scheme:    mgr.GetScheme(),
-		PodReader: mgr.GetAPIReader(),
-		Saves:     saves,
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		Saves:  saves,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "McServer")
 		os.Exit(1)
